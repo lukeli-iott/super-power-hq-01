@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Admin | Super Power HQ{% endblock %}
+
+{% block content %}
+<div class="container admin-container">
+    <h2>Applications Review</h2>
+    <p class="subtitle">Total applications: <strong>{{ rows|length }}</strong></p>
+
+    {% if rows %}
+    <div class="table-wrapper">
+        <table class="submissions-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Hero Name</th>
+                    <th>Powers</th>
+                    <th>Age</th>
+                    <th>Location</th>
+                    <th>Email</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td>{{ row.id }}</td>
+                    <td>{{ row.hero_name or "—" }}</td>
+                    <td>{{ row.powers or "—" }}</td>
+                    <td>{{ row.age or "—" }}</td>
+                    <td>{{ row.location or "—" }}</td>
+                    <td>{{ row.email or "—" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty-state">No applications yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

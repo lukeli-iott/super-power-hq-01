@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Register | Super Power HQ{% endblock %}
+
+{% block content %}
+<div class="container">
+    {% if success %}
+    <div class="alert alert-success">
+        <strong>Welcome, hero!</strong> Your application has been received. The HQ team will review it shortly.
+    </div>
+    {% endif %}
+
+    <section class="signup-section">
+        <h2>Register Your Powers</h2>
+        <p>Tell us about yourself and join our network of extraordinary individuals.</p>
+
+        <form method="POST" class="signup-form">
+            <div class="form-group">
+                <label for="hero_name">Hero Name *</label>
+                <input
+                    type="text"
+                    id="hero_name"
+                    name="hero_name"
+                    value="{{ hero_name }}"
+                    maxlength="200"
+                    required
+                    class="{% if errors.get('hero_name') %}field-error{% endif %}"
+                >
+                {% if errors.get('hero_name') %}
+                <span class="error">{{ errors['hero_name'] }}</span>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="powers">Powers *</label>
+                <textarea
+                    id="powers"
+                    name="powers"
+                    maxlength="500"
+                    required
+                    class="{% if errors.get('powers') %}field-error{% endif %}"
+                    rows="4"
+                >{{ powers }}</textarea>
+                {% if errors.get('powers') %}
+                <span class="error">{{ errors['powers'] }}</span>
+                {% endif %}
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="age">Age *</label>
+                    <input
+                        type="text"
+                        id="age"
+                        name="age"
+                        value="{{ age }}"
+                        maxlength="3"
+                        required
+                        class="{% if errors.get('age') %}field-error{% endif %}"
+                    >
+                    {% if errors.get('age') %}
+                    <span class="error">{{ errors['age'] }}</span>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="location">Location *</label>
+                    <input
+                        type="text"
+                        id="location"
+                        name="location"
+                        value="{{ location }}"
+                        maxlength="200"
+                        required
+                        class="{% if errors.get('location') %}field-error{% endif %}"
+                    >
+                    {% if errors.get('location') %}
+                    <span class="error">{{ errors['location'] }}</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email *</label>
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value="{{ email }}"
+                    maxlength="200"
+                    required
+                    class="{% if errors.get('email') %}field-error{% endif %}"
+                >
+                {% if errors.get('email') %}
+                <span class="error">{{ errors['email'] }}</span>
+                {% endif %}
+            </div>
+
+            <button type="submit" class="btn btn-primary">Submit Application</button>
+        </form>
+    </section>
+</div>
+{% endblock %}
