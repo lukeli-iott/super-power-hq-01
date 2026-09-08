@@ -106,19 +106,22 @@ The app is already deployed! Visit: **https://huggingface.co/spaces/lookiott/sup
 
 ### How It Works
 
-- **SDK:** Streamlit (free tier on HuggingFace Spaces ✓)
-- **Not:** Docker, Static HTML, or any paid tiers
+- **Platform:** HuggingFace Spaces (Pro plan with Docker support)
+- **Backend:** Streamlit (Python web framework)
+- **Containerization:** Docker (custom runtime with full control)
+- **Storage:** SQLite bundled in Docker container
 - The GitHub repo is synced to HuggingFace Spaces via automated CI/CD
 - Every push to `main` triggers tests and then deploys to HF
-- HF automatically detects `streamlit` in requirements.txt and runs the Streamlit app
-- No Docker needed — Streamlit is natively supported on HuggingFace free tier
+- HF automatically builds the Docker image from `Dockerfile` and runs the app
+- Pro plan enables Docker SDK and persistent deployments
 
 ### Setup for Your Own Space (if deploying elsewhere)
 
 1. **Create a new HuggingFace Space**:
    - Go to [huggingface.co/spaces](https://huggingface.co/spaces)
    - Click "Create new Space"
-   - Choose **Streamlit** as the SDK (not Docker)
+   - Choose **Docker** as the SDK
+   - Ensure you have a **Pro or higher plan** (Docker requires paid tier)
    - Name it (e.g., `super-power-hq`)
 
 2. **Set the admin password**:
@@ -195,25 +198,34 @@ HF Space auto-rebuilds and redeploys live
 - Deployment does NOT run (safe for PRs)
 - Merge to main to trigger deployment
 
-## ⚠️ Important: Data Persistence
+## 📊 Data Persistence (Pro Plan)
 
-**HuggingFace free-tier Streamlit Spaces have ephemeral storage.** This means:
+**Current setup (Docker + SQLite in container):**
 
-- `heroes.db` is bundled into the Space filesystem at build time
-- Any hero submissions made while the Space is running **will be lost** when:
-  - The Space goes to sleep (after 48 hours of inactivity)
-  - The Space is rebuilt or restarted
-  - You push a new commit (triggers a rebuild)
-- Upon restart, the database reverts to the seed data (the original test heroes)
+- `heroes.db` is bundled into the Docker image
+- Submissions persist **while the Space is running**
+- Data is **lost when:**
+  - The Space is stopped/restarted
+  - You push a new commit (triggers rebuild)
+  - HuggingFace performs maintenance
 
-**Why this design?** Free-tier Spaces are intended for demos and small projects. Persistent storage requires a paid tier.
+**For production use with full persistence:**
 
-**Workarounds for free tier:**
-- Export submissions as CSV from the admin dashboard periodically
-- Set up a scheduled backup job (external service)
-- Use a shared database service (e.g., Supabase free tier)
+Option 1: **HuggingFace Persistent Storage**
+- Mount a persistent volume in the Docker container
+- Submissions survive restarts
+- Requires additional HF Space storage
 
-**To upgrade:** Switch to a paid HuggingFace Space tier for persistent storage
+Option 2: **External Database**
+- PostgreSQL on Supabase, Railway, or similar
+- Full persistence + backup capabilities
+- Can be accessed from anywhere
+
+Option 3: **Regular Backups**
+- Export submissions as CSV from admin dashboard
+- Schedule periodic manual backups
+
+**Current recommendation:** Use Option 1 (HF persistent storage) for production, or periodically export CSV backups.
 
 ## Database Schema
 
