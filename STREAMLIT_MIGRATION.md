@@ -95,7 +95,7 @@ curl http://localhost:8501  # Should load the page
 1. Ensure `ADMIN_PASSWORD` is set in Space Settings → Secrets
 2. Push to `space` remote
 3. Wait for Space to build
-4. Visit https://huggingface.co/spaces/iott-demo/svuper-power-hq
+4. Visit https://huggingface.co/spaces/iott-demo/super-power-hq
 5. Test sign-up and admin panel
 
 ## Rollback (if needed)

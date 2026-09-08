@@ -24,7 +24,7 @@ https://github.com/lukeli-iott/super-power-hq-01/
 
 Your Space should already exist at:
 ```
-https://huggingface.co/spaces/iott-demo/svuper-power-hq
+https://huggingface.co/spaces/iott-demo/super-power-hq
 ```
 
 ### 3. HuggingFace Access Token (REQUIRED)
@@ -125,7 +125,7 @@ Then:
 - **Fix:** Verify the Space URL in the workflow matches your actual Space:
   ```yaml
   # .github/workflows/ci.yml line ~45
-  git remote add space https://huggingface.co/spaces/iott-demo/svuper-power-hq
+  git remote add space https://huggingface.co/spaces/iott-demo/super-power-hq
   ```
 
 #### ❌ "Database locked" in tests
@@ -139,7 +139,7 @@ Then:
 ### View HuggingFace Space Rebuild
 
 After deployment succeeds:
-1. Go to your Space: https://huggingface.co/spaces/iott-demo/svuper-power-hq
+1. Go to your Space: https://huggingface.co/spaces/iott-demo/super-power-hq
 2. Click the "Logs" or "App" tab
 3. Wait for the Space to rebuild (usually 1–5 minutes)
 4. Once green, the new version is live
@@ -150,7 +150,7 @@ If workflows fail or you need to push manually:
 
 ```bash
 # Add HF remote (one-time setup)
-git remote add space https://oauth2:YOUR_HF_TOKEN@huggingface.co/spaces/iott-demo/svuper-power-hq
+git remote add space https://oauth2:YOUR_HF_TOKEN@huggingface.co/spaces/iott-demo/super-power-hq
 
 # Push to HF Space
 git push space main

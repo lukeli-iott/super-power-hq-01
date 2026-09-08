@@ -1,12 +1,33 @@
 name: CI & Deploy to HuggingFace
 
+concurrency:
+  group: hf-space-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
       - main
+    paths-ignore:
+      - 'CI_SETUP.md'
+      - 'STREAMLIT_MIGRATION.md'
+      - '.gitignore'
+      - '.dockerignore'
+      - 'Dockerfile'
+      - 'templates/**'
+      - 'static/**'
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - 'CI_SETUP.md'
+      - 'STREAMLIT_MIGRATION.md'
+      - '.gitignore'
+      - '.dockerignore'
+      - 'Dockerfile'
+      - 'templates/**'
+      - 'static/**'
+  workflow_dispatch:
 
 jobs:
   test:

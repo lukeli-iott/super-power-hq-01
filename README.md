@@ -12,7 +12,7 @@ pinned: false
 
 A public hero registration and admin review system built with **Streamlit**. Aspiring heroes submit their details via a sign-up form; HQ staff review applications through a password-protected admin dashboard.
 
-**Live on HuggingFace Spaces:** https://huggingface.co/spaces/iott-demo/svuper-power-hq
+**Live on HuggingFace Spaces:** https://huggingface.co/spaces/iott-demo/super-power-hq
 
 ## Features
 
@@ -102,7 +102,7 @@ Use the sidebar to switch between:
 
 ## Deployment to HuggingFace Spaces
 
-The app is already deployed! Visit: **https://huggingface.co/spaces/iott-demo/svuper-power-hq**
+The app is already deployed! Visit: **https://huggingface.co/spaces/iott-demo/super-power-hq**
 
 ### How It Works
 
