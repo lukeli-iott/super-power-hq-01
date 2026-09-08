@@ -12,7 +12,11 @@ pinned: false
 
 A public hero registration and admin review system built with **Streamlit**. Aspiring heroes submit their details via a sign-up form; HQ staff review applications through a password-protected admin dashboard.
 
-**Live on HuggingFace Spaces:** https://huggingface.co/spaces/lookiott/super-power-hq
+**Live on HuggingFace Spaces:** https://huggingface.co/spaces/uklukie/super-power-hq
+
+<img width="858" height="601" alt="image" src="https://github.com/user-attachments/assets/9f4ea414-98a5-41d9-8649-cbc5d0e60449" />
+
+<img width="1150" height="801" alt="image" src="https://github.com/user-attachments/assets/3d02f15c-66c0-42c7-b95b-3d41fd92d665" />
 
 ## Features
 
