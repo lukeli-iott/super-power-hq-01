@@ -67,7 +67,7 @@ jobs:
 
       - name: Add HuggingFace Space remote
         run: |
-          git remote add space https://oauth2:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/iott-demo/svuper-power-hq
+          git remote add space https://oauth2:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/iott-demo/super-power-hq
 
       - name: Push to HuggingFace Space
         run: |
