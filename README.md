@@ -12,7 +12,7 @@ pinned: false
 
 A public hero registration and admin review system built with **Streamlit**. Aspiring heroes submit their details via a sign-up form; HQ staff review applications through a password-protected admin dashboard.
 
-**Live on HuggingFace Spaces:** https://huggingface.co/spaces/iott-demo/super-power-hq
+**Live on HuggingFace Spaces:** https://huggingface.co/spaces/lookiott/super-power-hq
 
 ## Features
 
@@ -102,14 +102,16 @@ Use the sidebar to switch between:
 
 ## Deployment to HuggingFace Spaces
 
-The app is already deployed! Visit: **https://huggingface.co/spaces/iott-demo/super-power-hq**
+The app is already deployed! Visit: **https://huggingface.co/spaces/lookiott/super-power-hq**
 
 ### How It Works
 
+- **SDK:** Streamlit (free tier on HuggingFace Spaces ✓)
+- **Not:** Docker, Static HTML, or any paid tiers
 - The GitHub repo is synced to HuggingFace Spaces via automated CI/CD
 - Every push to `main` triggers tests and then deploys to HF
 - HF automatically detects `streamlit` in requirements.txt and runs the Streamlit app
-- No Docker needed — HuggingFace free tier supports Streamlit natively
+- No Docker needed — Streamlit is natively supported on HuggingFace free tier
 
 ### Setup for Your Own Space (if deploying elsewhere)
 
@@ -195,16 +197,23 @@ HF Space auto-rebuilds and redeploys live
 
 ## ⚠️ Important: Data Persistence
 
-**HuggingFace free-tier Docker Spaces have ephemeral storage.** This means:
+**HuggingFace free-tier Streamlit Spaces have ephemeral storage.** This means:
 
-- `heroes.db` is bundled into the container image at build time.
-- Any hero submissions made while the Space is running **will be lost** when the Space goes to sleep, is rebuilt, or restarts.
-- Upon restart, the database reverts to the seed data (the original 11 test heroes).
+- `heroes.db` is bundled into the Space filesystem at build time
+- Any hero submissions made while the Space is running **will be lost** when:
+  - The Space goes to sleep (after 48 hours of inactivity)
+  - The Space is rebuilt or restarted
+  - You push a new commit (triggers a rebuild)
+- Upon restart, the database reverts to the seed data (the original test heroes)
 
-**This is an accepted tradeoff for a free deployment.** If you need persistent storage, consider:
-- Upgrading to a paid HF Space tier with persistent storage
-- Exporting applications to CSV manually via the admin dashboard
-- Adding a scheduled backup mechanism
+**Why this design?** Free-tier Spaces are intended for demos and small projects. Persistent storage requires a paid tier.
+
+**Workarounds for free tier:**
+- Export submissions as CSV from the admin dashboard periodically
+- Set up a scheduled backup job (external service)
+- Use a shared database service (e.g., Supabase free tier)
+
+**To upgrade:** Switch to a paid HuggingFace Space tier for persistent storage
 
 ## Database Schema
 
