@@ -276,7 +276,8 @@ flowchart LR
 ```mermaid
 flowchart TD
     Dev[Push / PR to GitHub]
-    Dev --> test[Test Job:<br/>Validate Streamlit app syntax]
+    Dev --> lint[Lint Job:<br/>Lint app.py with ruff]
+    lint[Lint Job:<br/>Lint app.py with ruff] --> test[Test Job:<br/>Validate Streamlit app syntax]
     test[Test Job:<br/>Validate Streamlit app syntax] -->|push to main only| deploy[Deploy Job:<br/>Push to HuggingFace Space]
     deploy --> Live[Live App Updated]
 ```
