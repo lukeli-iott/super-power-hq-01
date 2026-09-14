@@ -1,0 +1,57 @@
+name: Update Architecture Diagram
+
+concurrency:
+  group: update-architecture-diagram-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'app.py'
+      - 'requirements.txt'
+      - 'Dockerfile'
+      - 'schema.sql'
+      - '.github/workflows/**'
+      - 'scripts/generate_architecture_diagram.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-diagram:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install script dependencies
+        run: pip install pyyaml
+
+      - name: Regenerate architecture diagrams
+        run: python scripts/generate_architecture_diagram.py
+
+      - name: Check for changes
+        id: diff
+        run: |
+          if git diff --quiet -- README.md; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit and push updated diagrams
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "chore: regenerate architecture diagrams"
+          git push
