@@ -30,7 +30,24 @@ on:
   workflow_dispatch:
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Lint app.py with ruff
+        run: |
+          pip install ruff
+          ruff check app.py
+
   test:
+    needs: lint
     runs-on: ubuntu-latest
 
     steps:
