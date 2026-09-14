@@ -259,6 +259,31 @@ This will:
 
 ## Architecture
 
+<!-- ARCHITECTURE-DIAGRAM:START -->
+### System Design
+
+```mermaid
+flowchart LR
+    User[Hero / Admin User] -->|HTTPS| App[Streamlit App app.py]
+    App -->|reads/writes| DB[(SQLite heroes.db)]
+    App -->|checks ADMIN_PASSWORD env var| Auth[Admin Auth]
+    App -->|runs inside| Docker[Docker Container]
+    Docker -->|hosted on| HF[HuggingFace Space<br/>uklukie/super-power-hq]
+```
+
+### CI/CD Flow
+
+```mermaid
+flowchart TD
+    Dev[Push / PR to GitHub]
+    Dev --> test[Test Job:<br/>Validate Streamlit app syntax]
+    test[Test Job:<br/>Validate Streamlit app syntax] -->|push to main only| deploy[Deploy Job:<br/>Push to HuggingFace Space]
+    deploy --> Live[Live App Updated]
+```
+
+*Diagrams above are auto-generated from the repo's code and CI workflow -- see [`scripts/generate_architecture_diagram.py`](scripts/generate_architecture_diagram.py).*
+<!-- ARCHITECTURE-DIAGRAM:END -->
+
 - **Framework**: Streamlit (Python) — simple, no-backend-needed web framework
 - **Database**: SQLite (stdlib) — lightweight, file-based storage
 - **Hosting**: HuggingFace Spaces free tier (Streamlit SDK)
