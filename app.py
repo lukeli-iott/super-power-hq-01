@@ -1,263 +1,218 @@
+import csv
+import io
 import os
 import re
-import sqlite3
+import threading
 from pathlib import Path
 
-import streamlit as st
+from flask import Flask, Response, redirect, render_template, request, session, url_for
+from sqlalchemy import (
+    Column,
+    Integer,
+    MetaData,
+    Table,
+    Text,
+    create_engine,
+    select,
+)
+from sqlalchemy.engine import URL, Engine, make_url
 
 BASE_DIR = Path(__file__).parent
 DB_PATH = BASE_DIR / "heroes.db"
-
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+DB_INIT_LOCK = threading.Lock()
 
-st.set_page_config(
-    page_title="Super Power HQ",
-    page_icon="🦸",
-    layout="wide",
-    initial_sidebar_state="collapsed",
-)
-
-# Custom CSS
-st.markdown(
-    """
-    <style>
-    .main { padding: 2rem 1rem; }
-    .stTitle { color: #667eea; }
-    h1, h2, h3 { color: #667eea; }
-    .hero-table { width: 100%; }
-    .success-box {
-        background-color: #d4edda;
-        border: 1px solid #c3e6cb;
-        color: #155724;
-        padding: 1rem;
-        border-radius: 4px;
-        margin-bottom: 1rem;
-    }
-    .admin-warning {
-        background-color: #fff3cd;
-        border: 1px solid #ffeaa7;
-        color: #856404;
-        padding: 1rem;
-        border-radius: 4px;
-        margin-bottom: 1rem;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
+metadata = MetaData()
+submissions = Table(
+    "submissions",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("hero_name", Text),
+    Column("powers", Text),
+    Column("age", Text),
+    Column("location", Text),
+    Column("email", Text),
 )
 
 
-def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA busy_timeout = 5000")
-    return conn
+def create_database_engine(database_url=None):
+    database_url = database_url or os.environ.get("DATABASE_URL")
+    if database_url:
+        parsed_url = make_url(database_url)
+        if parsed_url.drivername in {"postgres", "postgresql"} or parsed_url.drivername.startswith(
+            "postgresql+"
+        ):
+            parsed_url = parsed_url.set(drivername="postgresql+psycopg")
+        elif os.environ.get("VERCEL"):
+            raise RuntimeError("DATABASE_URL must point to a persistent PostgreSQL database on Vercel.")
+        return create_engine(parsed_url, pool_pre_ping=True)
+    if os.environ.get("VERCEL"):
+        raise RuntimeError("Set DATABASE_URL to a persistent PostgreSQL database on Vercel.")
+    return create_engine(
+        URL.create("sqlite", database=str(DB_PATH)),
+        connect_args={"check_same_thread": False},
+    )
 
 
 def validate_signup(data):
     errors = {}
+    cleaned_data = {
+        field: data.get(field, "").strip()
+        for field in ("hero_name", "powers", "age", "location", "email")
+    }
 
-    hero_name = data.get("hero_name", "").strip()
-    if not hero_name:
+    if not cleaned_data["hero_name"]:
         errors["hero_name"] = "Hero name is required."
-    elif len(hero_name) > 200:
+    elif len(cleaned_data["hero_name"]) > 200:
         errors["hero_name"] = "Hero name is too long."
 
-    powers = data.get("powers", "").strip()
-    if not powers:
+    if not cleaned_data["powers"]:
         errors["powers"] = "Powers are required."
-    elif len(powers) > 500:
+    elif len(cleaned_data["powers"]) > 500:
         errors["powers"] = "Powers description is too long."
 
-    age = data.get("age", "").strip()
+    age = cleaned_data["age"]
     if not age:
         errors["age"] = "Age is required."
     elif not age.isdigit() or not (0 < int(age) <= 150):
         errors["age"] = "Age must be a number between 1 and 150."
 
-    location = data.get("location", "").strip()
-    if not location:
+    if not cleaned_data["location"]:
         errors["location"] = "Location is required."
-    elif len(location) > 200:
+    elif len(cleaned_data["location"]) > 200:
         errors["location"] = "Location is too long."
 
-    email = data.get("email", "").strip()
+    email = cleaned_data["email"]
     if not email:
         errors["email"] = "Email is required."
-    elif not EMAIL_RE.match(email):
+    elif not EMAIL_RE.fullmatch(email):
         errors["email"] = "Please enter a valid email address."
     elif len(email) > 200:
         errors["email"] = "Email is too long."
 
-    return errors, {
-        "hero_name": hero_name,
-        "powers": powers,
-        "age": age,
-        "location": location,
-        "email": email,
-    }
+    return errors, cleaned_data
 
 
-def check_admin_auth(password):
-    """Simple password check for admin panel."""
-    admin_password = os.environ.get("ADMIN_PASSWORD")
-    if not admin_password:
-        return False
-    return password == admin_password
+def create_app(database_url=None):
+    flask_app = Flask(__name__)
+    flask_app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
+    flask_app.config["DATABASE_URL"] = database_url
+    flask_app.extensions["database_engine"] = None
+    flask_app.extensions["database_initialized"] = False
 
+    @flask_app.before_request
+    def initialize_database():
+        if not flask_app.extensions["database_initialized"]:
+            with DB_INIT_LOCK:
+                if not flask_app.extensions["database_initialized"]:
+                    engine = flask_app.extensions["database_engine"]
+                    if engine is None:
+                        if os.environ.get("VERCEL") and not (
+                            flask_app.config["DATABASE_URL"]
+                            or os.environ.get("DATABASE_URL")
+                        ):
+                            raise RuntimeError(
+                                "Set DATABASE_URL to a persistent PostgreSQL database on Vercel."
+                            )
+                        engine = create_database_engine(
+                            flask_app.config["DATABASE_URL"]
+                        )
+                        flask_app.extensions["database_engine"] = engine
+                    metadata.create_all(engine)
+                    flask_app.extensions["database_initialized"] = True
 
-# Sidebar for navigation
-page = st.sidebar.radio(
-    "🦸 Super Power HQ",
-    ["Sign Up", "Admin Review"],
-    label_visibility="collapsed",
-)
-
-if page == "Sign Up":
-    st.title("Register Your Powers")
-    st.write("Tell us about yourself and join our network of extraordinary individuals.")
-
-    if st.session_state.get("show_success"):
-        st.markdown(
-            '<div class="success-box"><strong>Welcome, hero!</strong> Your application has been received. The HQ team will review it shortly.</div>',
-            unsafe_allow_html=True,
-        )
-        if st.button("Submit another application"):
-            st.session_state.show_success = False
-            st.rerun()
-
-    with st.form("signup_form"):
-        col1, col2 = st.columns(2)
-
-        with col1:
-            hero_name = st.text_input(
-                "Hero Name *", max_chars=200, key="hero_name_input"
-            )
-            age = st.text_input("Age *", max_chars=3, key="age_input")
-
-        with col2:
-            location = st.text_input(
-                "Location *", max_chars=200, key="location_input"
-            )
-            email = st.text_input("Email *", max_chars=200, key="email_input")
-
-        powers = st.text_area(
-            "Powers *", max_chars=500, height=100, key="powers_input"
+    @flask_app.get("/")
+    def index():
+        values = {field: "" for field in ("hero_name", "powers", "age", "location", "email")}
+        return render_template(
+            "index.html",
+            success=request.args.get("success") == "1",
+            errors={},
+            **values,
         )
 
-        submitted = st.form_submit_button("Submit Application", use_container_width=True)
+    @flask_app.post("/")
+    def submit_application():
+        form_data = request.form.to_dict()
+        errors, cleaned_data = validate_signup(form_data)
+        if errors:
+            return (
+                render_template(
+                    "index.html",
+                    success=False,
+                    errors=errors,
+                    **cleaned_data,
+                ),
+                400,
+            )
 
-        if submitted:
-            form_data = {
-                "hero_name": hero_name,
-                "powers": powers,
-                "age": age,
-                "location": location,
-                "email": email,
-            }
+        engine: Engine = flask_app.extensions["database_engine"]
+        with engine.begin() as connection:
+            connection.execute(submissions.insert().values(**cleaned_data))
+        return redirect(url_for("index", success=1), code=303)
 
-            errors, cleaned_data = validate_signup(form_data)
+    @flask_app.route("/admin", methods=["GET", "POST"])
+    def admin():
+        error = None
+        admin_password = os.environ.get("ADMIN_PASSWORD")
 
-            if errors:
-                st.error("⚠️ Please fix the following errors:")
-                for field, error in errors.items():
-                    st.write(f"- **{field}**: {error}")
+        if request.method == "POST":
+            action = request.form.get("action")
+            if action == "logout":
+                session.pop("admin_authenticated", None)
+                return redirect(url_for("admin"))
+            if not flask_app.config["SECRET_KEY"]:
+                error = "Admin access is not configured. Set SECRET_KEY."
+            elif not admin_password:
+                error = "Admin access is not configured. Set ADMIN_PASSWORD."
+            elif request.form.get("password", "") == admin_password:
+                session["admin_authenticated"] = True
+                return redirect(url_for("admin"))
             else:
-                db = get_db()
-                db.execute(
-                    """
-                    INSERT INTO submissions (hero_name, powers, age, location, email)
-                    VALUES (?, ?, ?, ?, ?)
-                    """,
-                    (
-                        cleaned_data["hero_name"],
-                        cleaned_data["powers"],
-                        cleaned_data["age"],
-                        cleaned_data["location"],
-                        cleaned_data["email"],
-                    ),
-                )
-                db.commit()
-                db.close()
+                error = "Incorrect password."
 
-                st.session_state.show_success = True
-                st.rerun()
-
-else:  # Admin Review
-    st.title("Admin Review")
-
-    # Password protection
-    if "admin_authenticated" not in st.session_state:
-        st.session_state.admin_authenticated = False
-
-    if not st.session_state.admin_authenticated:
-        st.markdown(
-            '<div class="admin-warning"><strong>🔐 Admin Access</strong> — Enter the admin password to view applications.</div>',
-            unsafe_allow_html=True,
-        )
-
-        password = st.text_input(
-            "Admin Password",
-            type="password",
-            key="admin_password_input",
-        )
-
-        if st.button("Login", use_container_width=True):
-            if check_admin_auth(password):
-                st.session_state.admin_authenticated = True
-                st.rerun()
-            else:
-                st.error(
-                    "❌ Incorrect password. If you don't have access, contact HQ."
-                )
-    else:
-        # Show logout button and admin content
-        col1, col2 = st.columns([0.9, 0.1])
-        with col2:
-            if st.button("🚪 Logout"):
-                st.session_state.admin_authenticated = False
-                st.rerun()
-
-        # Fetch applications
-        db = get_db()
-        rows = db.execute(
-            "SELECT id, hero_name, powers, age, location, email FROM submissions ORDER BY id DESC"
-        ).fetchall()
-        db.close()
-
-        st.write(f"**Total applications:** {len(rows)}")
-
-        if rows:
-            # Convert rows to list of dicts for display
-            data = []
-            for row in rows:
-                data.append(
-                    {
-                        "ID": row["id"],
-                        "Hero Name": row["hero_name"] or "—",
-                        "Powers": row["powers"] or "—",
-                        "Age": row["age"] or "—",
-                        "Location": row["location"] or "—",
-                        "Email": row["email"] or "—",
-                    }
-                )
-
-            st.dataframe(data, use_container_width=True, hide_index=True)
-
-            # Export to CSV
-            import csv
-            import io
-
-            csv_buffer = io.StringIO()
-            writer = csv.DictWriter(csv_buffer, fieldnames=data[0].keys())
-            writer.writeheader()
-            writer.writerows(data)
-
-            st.download_button(
-                label="📥 Download as CSV",
-                data=csv_buffer.getvalue(),
-                file_name="hero_applications.csv",
-                mime="text/csv",
-            )
+        authenticated = session.get("admin_authenticated", False)
+        if authenticated:
+            engine: Engine = flask_app.extensions["database_engine"]
+            with engine.connect() as connection:
+                rows = connection.execute(
+                    select(submissions).order_by(submissions.c.id.desc())
+                ).mappings().all()
         else:
-            st.info("No applications yet.")
+            rows = []
+
+        return render_template(
+            "admin.html",
+            rows=rows,
+            authenticated=authenticated,
+            error=error,
+        )
+
+    @flask_app.get("/admin/export")
+    def export_applications():
+        if not session.get("admin_authenticated", False):
+            return redirect(url_for("admin"))
+
+        engine: Engine = flask_app.extensions["database_engine"]
+        with engine.connect() as connection:
+            rows = connection.execute(
+                select(submissions).order_by(submissions.c.id.desc())
+            ).mappings().all()
+
+        output = io.StringIO()
+        writer = csv.DictWriter(
+            output,
+            fieldnames=("id", "hero_name", "powers", "age", "location", "email"),
+        )
+        writer.writeheader()
+        writer.writerows(dict(row) for row in rows)
+        return Response(
+            output.getvalue(),
+            mimetype="text/csv",
+            headers={"Content-Disposition": "attachment; filename=hero_applications.csv"},
+        )
+
+    return flask_app
+
+
+app = create_app()

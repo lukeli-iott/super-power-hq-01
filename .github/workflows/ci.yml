@@ -12,10 +12,6 @@ on:
       - 'CI_SETUP.md'
       - 'STREAMLIT_MIGRATION.md'
       - '.gitignore'
-      - '.dockerignore'
-      - 'Dockerfile'
-      - 'templates/**'
-      - 'static/**'
   pull_request:
     branches:
       - main
@@ -41,10 +37,10 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Lint app.py with ruff
+      - name: Lint app and tests with ruff
         run: |
           pip install ruff
-          ruff check app.py
+          ruff check app.py tests
 
   test:
     needs: lint
@@ -63,30 +59,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Validate Streamlit app syntax
+      - name: Validate Flask app and tests
         run: |
           python -m py_compile app.py
-          python -c "import streamlit; print('✓ Streamlit installed')"
-
-      - name: Check Streamlit config
-        run: |
-          python -c "
-          import os
-          assert os.path.exists('.streamlit/config.toml'), '.streamlit/config.toml not found'
-          print('✓ Streamlit config found')
-          "
-
-      - name: Verify database
-        run: |
-          python -c "
-          import sqlite3
-          conn = sqlite3.connect('heroes.db')
-          cursor = conn.cursor()
-          cursor.execute('SELECT COUNT(*) FROM submissions')
-          count = cursor.fetchone()[0]
-          print(f'✓ Database connected with {count} rows')
-          conn.close()
-          "
+          python -m py_compile tests/test_app.py
+          python -m unittest discover -s tests
 
   deploy:
     needs: test

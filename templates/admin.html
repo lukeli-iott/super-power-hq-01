@@ -4,8 +4,26 @@
 
 {% block content %}
 <div class="container admin-container">
+    {% if not authenticated %}
+    <h2>Admin Review</h2>
+    <form method="POST" class="signup-form">
+        <div class="form-group">
+            <label for="password">Admin Password</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        {% if error %}
+        <p class="error">{{ error }}</p>
+        {% endif %}
+        <button type="submit" class="btn btn-primary">Login</button>
+    </form>
+    {% else %}
     <h2>Applications Review</h2>
     <p class="subtitle">Total applications: <strong>{{ rows|length }}</strong></p>
+    <form method="POST">
+        <input type="hidden" name="action" value="logout">
+        <button type="submit" class="btn btn-primary">Logout</button>
+    </form>
+    <p><a href="{{ url_for('export_applications') }}">Download applications as CSV</a></p>
 
     {% if rows %}
     <div class="table-wrapper">
@@ -36,6 +54,7 @@
     </div>
     {% else %}
     <p class="empty-state">No applications yet.</p>
+    {% endif %}
     {% endif %}
 </div>
 {% endblock %}

@@ -1,4 +1,6 @@
-# Streamlit Migration (HuggingFace Free Tier Support)
+# Historical Streamlit Migration (Hugging Face)
+
+> This document records an earlier Streamlit version of the app. The current app is Flask-based to support Vercel and WSGI hosting; see [README.md](README.md) for current setup and deployment instructions.
 
 ## What Changed
 
