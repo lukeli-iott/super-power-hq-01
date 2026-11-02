@@ -56,7 +56,7 @@ def detect_framework(requirements: str) -> str:
 
 
 def detect_database(app_source: str) -> str | None:
-    if "sqlite3" in app_source:
+    if "sqlite" in app_source.lower():
         match = re.search(r"""DB_PATH\s*=.*?["']?([\w.]+\.db)["']?""", app_source)
         db_name = match.group(1) if match else "database.db"
         return f"SQLite {db_name}"

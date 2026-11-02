@@ -62,22 +62,18 @@ class AppTests(unittest.TestCase):
         self.assertEqual(response.mimetype, "text/csv")
         self.assertIn(b"id,hero_name,powers,age,location,email", response.data)
 
-    def test_vercel_requires_persistent_database_url(self):
+    def test_vercel_uses_writable_sqlite_copy(self):
+        sqlite_path = os.path.join(self.temp_dir.name, "vercel", "heroes.db")
         with (
             patch.dict(os.environ, {"VERCEL": "1"}, clear=False),
             patch.dict(os.environ, {"DATABASE_URL": ""}),
         ):
-            vercel_app = create_app()
+            vercel_app = create_app(sqlite_path=sqlite_path)
             vercel_app.config["TESTING"] = True
-            with self.assertRaisesRegex(RuntimeError, "DATABASE_URL"):
-                vercel_app.test_client().get("/")
+            response = vercel_app.test_client().get("/")
 
-    def test_vercel_rejects_sqlite_database_url(self):
-        with patch.dict(os.environ, {"VERCEL": "1"}, clear=False):
-            vercel_app = create_app("sqlite:///temporary.db")
-            vercel_app.config["TESTING"] = True
-            with self.assertRaisesRegex(RuntimeError, "PostgreSQL"):
-                vercel_app.test_client().get("/")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(os.path.isfile(sqlite_path))
 
 
 if __name__ == "__main__":

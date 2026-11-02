@@ -2,6 +2,7 @@ import csv
 import io
 import os
 import re
+import shutil
 import threading
 from pathlib import Path
 
@@ -35,7 +36,7 @@ submissions = Table(
 )
 
 
-def create_database_engine(database_url=None):
+def create_database_engine(database_url=None, sqlite_path=None):
     database_url = database_url or os.environ.get("DATABASE_URL")
     if database_url:
         parsed_url = make_url(database_url)
@@ -43,13 +44,15 @@ def create_database_engine(database_url=None):
             "postgresql+"
         ):
             parsed_url = parsed_url.set(drivername="postgresql+psycopg")
-        elif os.environ.get("VERCEL"):
-            raise RuntimeError("DATABASE_URL must point to a persistent PostgreSQL database on Vercel.")
         return create_engine(parsed_url, pool_pre_ping=True)
-    if os.environ.get("VERCEL"):
-        raise RuntimeError("Set DATABASE_URL to a persistent PostgreSQL database on Vercel.")
+    if sqlite_path is None:
+        sqlite_path = Path("/tmp/heroes.db") if os.environ.get("VERCEL") else DB_PATH
+    sqlite_path = Path(sqlite_path)
+    if os.environ.get("VERCEL") and not sqlite_path.exists() and DB_PATH.exists():
+        sqlite_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(DB_PATH, sqlite_path)
     return create_engine(
-        URL.create("sqlite", database=str(DB_PATH)),
+        URL.create("sqlite", database=str(sqlite_path)),
         connect_args={"check_same_thread": False},
     )
 
@@ -93,12 +96,13 @@ def validate_signup(data):
     return errors, cleaned_data
 
 
-def create_app(database_url=None):
+def create_app(database_url=None, sqlite_path=None):
     flask_app = Flask(__name__)
     flask_app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
     flask_app.config["DATABASE_URL"] = database_url
     flask_app.extensions["database_engine"] = None
     flask_app.extensions["database_initialized"] = False
+    flask_app.config["SQLITE_PATH"] = sqlite_path
 
     @flask_app.before_request
     def initialize_database():
@@ -107,15 +111,9 @@ def create_app(database_url=None):
                 if not flask_app.extensions["database_initialized"]:
                     engine = flask_app.extensions["database_engine"]
                     if engine is None:
-                        if os.environ.get("VERCEL") and not (
-                            flask_app.config["DATABASE_URL"]
-                            or os.environ.get("DATABASE_URL")
-                        ):
-                            raise RuntimeError(
-                                "Set DATABASE_URL to a persistent PostgreSQL database on Vercel."
-                            )
                         engine = create_database_engine(
-                            flask_app.config["DATABASE_URL"]
+                            flask_app.config["DATABASE_URL"],
+                            flask_app.config["SQLITE_PATH"],
                         )
                         flask_app.extensions["database_engine"] = engine
                     metadata.create_all(engine)
